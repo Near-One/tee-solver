@@ -19,7 +19,11 @@ const config: Config = {
   },
   worker: {
     minimumBalance: 0.1, // NEAR
-  }
+  },
+  pool: {
+    minimumNearBalance: 5, // wNEAR
+    minimumStableCoinBalance: 10, // USDC
+  },
 };
 
 export default config;

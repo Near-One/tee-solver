@@ -12,7 +12,7 @@ const SOLVER_PORT = 3000;
 
 export class PhalaCloudService {
   async setupPhalaAuth(): Promise<void> {
-    const config = await getConfig();
+    const config = getConfig();
     
     const localApiKey = await getApiKey();
     if (!localApiKey) {
@@ -27,7 +27,7 @@ export class PhalaCloudService {
   }
 
   async createSolverCvm(poolId: number, tokenIds: string[]): Promise<void> {
-    const config = await getConfig();
+    const config = getConfig();
 
     // const composePath = join(process.cwd(), `docker-compose.yaml`);
     const envPath = join(process.cwd(), `.env.phala`);
