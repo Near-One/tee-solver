@@ -9,7 +9,7 @@ export type NearService = {
 };
 
 export async function initNear(): Promise<NearService> {
-  const config = await getConfig();
+  const config = getConfig();
   const keyStore = new keyStores.InMemoryKeyStore();
   // configure operator account's key
   keyStore.setKey(

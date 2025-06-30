@@ -17,4 +17,8 @@ export type Config = {
   worker: {
     minimumBalance: number;
   };
+  pool: {
+    minimumNearBalance: number;
+    minimumStableCoinBalance: number;
+  };
 };

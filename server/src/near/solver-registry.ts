@@ -1,6 +1,11 @@
 import { getConfig } from "../config";
 import { range } from "../utils/array";
+import { logger } from "../utils/logger";
+import { Intents, INTENTS_TOKENS, TOKEN_INFO } from "./intents";
 import { viewFunction } from "./utils";
+import Big from "big.js";
+
+const config = getConfig();
 
 export interface WorkerInfo {
   account_id: string;
@@ -22,17 +27,17 @@ export interface PoolInfo {
 
 export class SolverRegistry {
   private solverRegistryContract: string | null = null;
+  private intents: Intents | null = null;
 
-  async init() {
+  constructor() {
     if (this.solverRegistryContract) {
       return;
     }
-    const config = await getConfig();
     this.solverRegistryContract = config.near.contract.solverRegistry;
+    this.intents = new Intents();
   }
 
   public async getPoolLen(): Promise<number> {
-    await this.init();
     return await viewFunction({
       contractId: this.solverRegistryContract!,
       methodName: 'get_pool_len',
@@ -41,7 +46,6 @@ export class SolverRegistry {
   }
 
   public async getPool(poolId: number): Promise<PoolInfo> {
-    await this.init();
     return await viewFunction({
       contractId: this.solverRegistryContract!,
       methodName: 'get_pool',
@@ -49,8 +53,37 @@ export class SolverRegistry {
     });
   }
 
+  public async getPoolContractId(poolId: number): Promise<string> {
+    return `pool-${poolId}.${this.solverRegistryContract}`;
+  }
+
+  public async getPoolBalances(poolId: number): Promise<Record<string, string>> {
+    const poolContractId = await this.getPoolContractId(poolId);
+    const pool = await this.getPool(poolId);
+    const tokenIds = pool.token_ids.map(tokenId => `nep141:${tokenId}`);
+    const balances = await this.intents?.getBalances(poolContractId, tokenIds) ?? [];
+    return tokenIds.reduce((acc, tokenId, index) => {
+      acc[tokenId] = balances[index];
+      return acc;
+    }, {} as Record<string, string>);
+  }
+
+  public async hasEnoughBalancesInPool(poolId: number): Promise<boolean> {
+    const poolBalances = await this.getPoolBalances(poolId);
+    logger.info(`Pool ${poolId} token balances: ${JSON.stringify(poolBalances, null, 2)}`);
+
+    function hasBalance(tokenId: string): boolean {
+      const minBalance = tokenId === INTENTS_TOKENS.wNEAR ? config.pool.minimumNearBalance : config.pool.minimumStableCoinBalance;
+      return !!poolBalances[tokenId] && Big(poolBalances[tokenId]).gte(Big(minBalance).mul(Big(10).pow(TOKEN_INFO[tokenId].decimals)));
+    }
+
+    // At least one token in the pair is wNEAR or USDC or USDT with enough balances
+    return hasBalance(INTENTS_TOKENS.wNEAR)
+      || hasBalance(INTENTS_TOKENS.USDC)
+      || hasBalance(INTENTS_TOKENS.USDT);
+  }
+
   public async getWorkerLen(): Promise<number> {
-    await this.init();
     return await viewFunction({
       contractId: this.solverRegistryContract!,
       methodName: 'get_worker_len',
@@ -59,7 +92,6 @@ export class SolverRegistry {
   }
 
   public async getWorker(accountId: string): Promise<WorkerInfo> {
-    await this.init();
     return await viewFunction({
       contractId: this.solverRegistryContract!,
       methodName: 'get_worker',
@@ -70,8 +102,6 @@ export class SolverRegistry {
   }
 
   public async getWorkers(): Promise<WorkerInfo[]> {
-    await this.init();
-
     const workerLen = await this.getWorkerLen();
     const limit = 100;
     const workers = [];
@@ -90,8 +120,6 @@ export class SolverRegistry {
   }
 
   public async getPoolsWithoutWorkers(): Promise<number[]> {
-    await this.init();
-
     const poolLen = await this.getPoolLen();
 
     const workers = await this.getWorkers();
