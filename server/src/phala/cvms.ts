@@ -26,7 +26,17 @@ export class PhalaCloudService {
     logger.info('Phala auth configured successfully');
   }
 
-  async createSolverCvm(poolId: number, tokenIds: string[]): Promise<void> {
+  /**
+   * Create a solver CVM for a given pool.
+   * @param poolId - The ID of the pool.
+   * @param tokenIds - The IDs of the tokens in the pool.
+   * @param fee - The fee of the pool in basis points.
+   */
+  async createSolverCvm(poolId: number, tokenIds: string[], fee: number): Promise<void> {
+    if (fee < 0 || fee > 10000) { // Assuming basis points (0.00% to 100.00%)
+      throw new Error('Invalid fee value. Expected fee in basis points (e.g., 500 for 5%).');
+    }
+
     const config = await getConfig();
 
     // const composePath = join(process.cwd(), `docker-compose.yaml`);
@@ -38,6 +48,7 @@ SOLVER_REGISTRY_CONTRACT=${config.near.contract.solverRegistry}
 SOLVER_POOL_ID=${poolId}
 AMM_TOKEN1_ID=${tokenIds[0]}
 AMM_TOKEN2_ID=${tokenIds[1]}
+MARGIN_PERCENT=${(fee / 100).toFixed(2)}
     `;
     writeFileSync(envPath, envContent);
 

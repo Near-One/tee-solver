@@ -19,11 +19,15 @@ export async function deploySolvers() {
   logger.info(`Found ${poolsWithoutCvms.length} pools without CVMs: [${poolsWithoutCvms.join(', ')}]`);
 
   for (const poolId of poolsWithoutCvms) {
-    const pool = await solverRegistry.getPool(poolId);
-    logger.info(`Deploying solver for pool ${poolId}`, pool, pool);
-    // TODO: make sure the pool already has fund in NEAR Intents before deploy solver CVM
-    await phala.createSolverCvm(poolId, pool.token_ids);
-    setTimeout(fundSolvers, 60 * 1000);
+    try {
+      const pool = await solverRegistry.getPool(poolId);
+      logger.info(`Deploying solver for pool ${poolId}`, pool, pool);
+      // TODO: make sure the pool already has fund in NEAR Intents before deploy solver CVM
+      await phala.createSolverCvm(poolId, pool.token_ids, pool.fee);
+      setTimeout(fundSolvers, 60 * 1000);
+    } catch (e) {
+      logger.error(`Failed to deploy solver for pool ${poolId}: ${e}`);
+    }
   }
 
   setTimeout(async () => {
