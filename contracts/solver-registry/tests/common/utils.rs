@@ -359,6 +359,7 @@ pub async fn approve_compose_hash(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let result = owner
         .call(solver_registry.id(), "approve_compose_hash")
+        .deposit(NearToken::from_yoctonear(1))
         .args_json(json!({
             "compose_hash": COMPOSE_HASH
         }))

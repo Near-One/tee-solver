@@ -17,7 +17,9 @@ impl Contract {
             msg.parse().unwrap()
         };
 
-        let token_id = env::predecessor_account_id();
+        let token_id: TokenId = env::predecessor_account_id().into();
+
+        self.internal_deposit_mt_balance(&receiver_id.clone(), &token_id.clone(), amount.0);
 
         log!(
             "Deposit {} {} into intents contract for account {}",
